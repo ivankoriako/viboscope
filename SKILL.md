@@ -41,7 +41,7 @@ On every invocation:
 **1. Version check (silent, don't block the user):**
 Call `GET /health` → compare `skill_version` from response with this file's version (3.1.0).
 If server version is newer → show ONCE per session:
-> "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/clawmatch.md`"
+> "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md`"
 If same or server unavailable → say nothing, proceed normally.
 
 **2. Check if `data/.api_key` exists:**
