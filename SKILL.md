@@ -7,7 +7,7 @@ description: >
   "who am I compatible with", "check compatibility with @nickname", "Viboscope",
   "inbox", "входящие", "найди мне", "поищи людей", "проверь совместимость",
   "find me a partner", "find me a team".
-version: 3.1.0
+version: 3.2.0
 author: ivanschmidt
 license: MIT
 ---
@@ -39,7 +39,7 @@ curl -s -H "Authorization: Bearer $(cat data/.api_key)" \
 On every invocation:
 
 **1. Version check (silent, don't block the user):**
-Call `GET /health` → compare `skill_version` from response with this file's version (3.1.0).
+Call `GET /health` → compare `skill_version` from response with this file's version (3.2.0).
 If server version is newer → show ONCE per session:
 > "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md`"
 If same or server unavailable → say nothing, proceed normally.
@@ -304,9 +304,13 @@ POST /register
 }
 ```
 
-`portrait_source` describes the source of the portrait TEXT only: "multi" (multiple LLMs), "chatgpt"/"claude"/"gemini" (single LLM), "questionnaire" (no LLM portrait — agent synthesizes text from scores), "manual" (agent interview). If one LLM + questionnaires: use the LLM name (e.g. "chatgpt"). The `data_sources` field captures the full list of all inputs.
+`portrait_source` describes the source of the portrait TEXT only: `"multi"` (multiple LLMs), `"chatgpt"`/`"claude"`/`"gemini"` (single LLM), `"questionnaire"` (no LLM portrait — agent synthesizes text from scores), `"manual"` (agent interview). If one LLM + questionnaires: use the LLM name (e.g. `"chatgpt"`). The `data_sources` field captures the full list of all inputs.
 
 `data_sources`: list of all sources used. Possible values: `context`, `computer_scan`, `llm_chatgpt`, `llm_claude`, `llm_gemini`, `llm_other`, `bfi_questionnaire`, `pvq_questionnaire`, `ecr_questionnaire`, `conflict_questionnaire`, `work_questionnaire`.
+
+**Naming note:** `portrait_source` uses short names (`chatgpt`/`claude`/`gemini`) because it describes the portrait author. `data_sources` uses prefixed names (`llm_chatgpt`/`llm_claude`/`llm_gemini`) to namespace all input types (LLMs, questionnaires, scans) without collisions. These fields serve different purposes — do not confuse them.
+
+**Field length limits:** String fields like `risk_attitude` and `founder_type` have a server-side maximum of 100 characters. Keep values concise.
 
 On success:
 - Save `api_key` from response to `data/.api_key`
@@ -335,9 +339,9 @@ Triggers: "find me", "search", "who matches", "найди", "поищи", "кт�
 
 **Romantic search — gender filter:** When user seeks a romantic partner, ask naturally: "Are you looking for a man, a woman, or open to anyone?" Then pass `gender_filter` in the search:
 ```
-POST /search { "context": "romantic", "filters": { "looking_for": ["romantic-partner"], "gender_filter": "male" } }
+POST /search { "context": "romantic", "filters": { "looking_for": ["romantic-partner"], "gender_filter": ["male"] } }
 ```
-Valid gender values: `male`, `female`, `non-binary`, `null` (no preference).
+Valid gender values (always a list): `["male"]`, `["female"]`, `["non-binary"]`, `null` (no preference).
 
 **The same person gets different scores depending on context.** Someone can be a great cofounder (90%) but an average friend (72%) — because for business, team role complementarity matters more than shared hobbies.
 
@@ -441,9 +445,25 @@ Triggers: "write to [nickname]", "reply", "my conversations", "напиши", "�
 
 User says what to write → you compose and show → user approves → you send.
 
+**First contact** (no prior conversation) — use `POST /messages`:
+```
+User: "Write to Anna"
+You: 'Here's what I'll send to Anna: "Hi! Your logistics project caught my attention — I'd love to learn more about it." Send?'
+User: "Send it"
+→ POST /messages
+{
+  "to_nickname": "anna",
+  "body": "Hi! Your logistics project caught my attention — I'd love to learn more about it.",
+  "match_percent": 87,
+  "match_comment": "Strong values alignment and complementary work styles"
+}
+```
+Fields: `to_nickname` (not `to`), `match_percent` — required integer 0-100 from search results, `match_comment` — required string 10-500 chars summarising why you're compatible.
+
+**Reply in existing conversation** — use `POST /conversations/{nickname}/messages`:
 ```
 User: "Tell Anna I'm interested in her project"
-You: 'Here's what I'll send: "Hi Anna! Your logistics project caught my attention — I'd love to learn more about it." Send?'
+You: 'Here's what I'll send: "Sounds great, I'd love to continue the conversation!" Send?'
 User: "Send it"
 → POST /conversations/anna/messages { "body": "..." }
 ```
@@ -478,7 +498,16 @@ You: "Want to share your contact? Which one — Telegram, email?"
 Triggers: "my profile", "update profile", "privacy settings", "мой профиль", "настройки"
 
 - **View:** `GET /profile` → show formatted profile
-- **Update:** `PATCH /profile` with changed fields
+- **Update:** `PATCH /profile` — fields must be wrapped in `{"profile": {...}}`:
+  ```
+  PATCH /profile
+  {
+    "profile": {
+      "interests": ["AI", "tennis", "psychology"],
+      "work_style": { "pace": 6, "structure": 5 }
+    }
+  }
+  ```
 - **Privacy:** change visible, show_age, show_geo, show_last_active
 - **Delete:** `POST /profile/delete` with `{"confirm": "DELETE"}`
   Tell user: "Profile hidden from search immediately. Full deletion in 7 days. You can restore during this period. Delete local data too?"
