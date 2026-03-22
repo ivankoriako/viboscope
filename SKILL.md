@@ -7,7 +7,7 @@ description: >
   "who am I compatible with", "check compatibility with @nickname", "Viboscope",
   "inbox", "входящие", "найди мне", "поищи людей", "проверь совместимость",
   "find me a partner", "find me a team".
-version: 3.2.0
+version: 3.3.0
 author: ivanschmidt
 license: MIT
 ---
@@ -39,7 +39,7 @@ curl -s -H "Authorization: Bearer $(cat data/.api_key)" \
 On every invocation:
 
 **1. Version check (silent, don't block the user):**
-Call `GET /health` → compare `skill_version` from response with this file's version (3.2.0).
+Call `GET /health` → compare `skill_version` from response with this file's version (3.3.0).
 If server version is newer → show ONCE per session:
 > "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md`"
 If same or server unavailable → say nothing, proceed normally.
@@ -47,7 +47,7 @@ If same or server unavailable → say nothing, proceed normally.
 **2. Check if `data/.api_key` exists:**
 - **If not** → Ask: "Do you already have a Viboscope account on another platform?"
   - **If yes** → "Use your other agent to generate a transfer code: say 'Viboscope transfer code'. Then tell me the code."
-    Then: `POST /auth/redeem-code { "code": "CLWM-XXXX-XXXX" }` → save api_key to `data/.api_key` → "Welcome back, {nickname}!"
+    Then: `POST /auth/redeem-code { "code": "VIBS-XXXX-XXXX" }` → save api_key to `data/.api_key` → "Welcome back, {nickname}!"
   - **If no** → run Onboarding (section below)
 - **If yes** → determine what the user wants from their message and route to the appropriate mode
 
@@ -312,6 +312,8 @@ POST /register
 
 **Field length limits:** String fields like `risk_attitude` and `founder_type` have a server-side maximum of 100 characters. Keep values concise.
 
+**Note:** `interests`, `skills`, and `languages` are normalized on the server: lowercased and spaces replaced with hyphens. Display them in human-readable form (e.g., convert `ux-design` back to `UX Design` for display).
+
 On success:
 - Save `api_key` from response to `data/.api_key`
 - Run `chmod 600 data/.api_key`
@@ -345,7 +347,9 @@ Valid gender values (always a list): `["male"]`, `["female"]`, `["non-binary"]`,
 
 **The same person gets different scores depending on context.** Someone can be a great cofounder (90%) but an average friend (72%) — because for business, team role complementarity matters more than shared hobbies.
 
-**Common looking_for tags:** `cofounder`, `interesting-project`, `romantic-partner`, `deep-friends`, `mentor`, `mentee`, `mastermind`, `hackathon-team`, `accountability-partner`, `travel-buddy`, `hobby-partner`, `freelance-collab`, `interesting-people`
+**Common looking_for tags:** `cofounder`, `interesting-project`, `romantic-partner`, `deep-friends`, `mentor-offering`, `mentor-seeking`, `mastermind`, `hackathon-team`, `accountability-partner`, `travel-buddy`, `hobby-partner`, `freelance-collab`, `interesting-people`
+
+Use `mentor-offering` if the user wants to mentor others, `mentor-seeking` if they're looking for a mentor.
 
 **Active search** — specific request:
 ```
@@ -402,6 +406,8 @@ Confidence = computed_dimensions / 9. Show "(limited data)" if < 5 dimensions co
 Always frame positively: "87% — that's a strong match!" not just a bare number.
 
 User actions: "Write to Aleksey", "More about Maria", "More results"
+
+To paginate results, pass `limit` and `offset` parameters in the search body: `{"limit": 10, "offset": 10}` for the second page.
 
 After search, update last_active implicitly.
 
@@ -514,7 +520,7 @@ Triggers: "my profile", "update profile", "privacy settings", "мой профи
   If yes → delete `data/` directory
 - **Restore:** `POST /profile/restore` (within 7 days)
 - **Rotate key:** `POST /api-key/rotate` → save new key to `data/.api_key`
-- **Transfer to another platform:** `POST /auth/transfer-code` → show code to user: "Your transfer code: CLWM-XXXX-XXXX (valid 10 minutes). Say 'Viboscope transfer code CLWM-...' on the new platform."
+- **Transfer to another platform:** `POST /auth/transfer-code` → show code to user: "Your transfer code: VIBS-XXXX-XXXX (valid 10 minutes). Say 'Viboscope transfer code VIBS-...' on the new platform."
 
 ## Mode: Subscriptions
 
@@ -660,6 +666,8 @@ In autonomous mode, talk "as" the user but never quote their psychological profi
 - On 401: suggest key rotation (`POST /api-key/rotate`)
 
 ## API Reference
+
+**Error format:** Error responses use format `{"detail": "message", "error": "error_code"}`. Some endpoints return `{"detail": {"error": "code"}}` — agents should handle both formats.
 
 | Action | Method | Endpoint |
 |--------|--------|----------|
