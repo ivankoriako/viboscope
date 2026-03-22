@@ -7,7 +7,7 @@ description: >
   "who am I compatible with", "check compatibility with @nickname", "Viboscope",
   "inbox", "входящие", "найди мне", "поищи людей", "проверь совместимость",
   "find me a partner", "find me a team".
-version: 3.3.0
+version: 3.4.0
 author: ivanschmidt
 license: MIT
 ---
@@ -39,7 +39,7 @@ curl -s -H "Authorization: Bearer $(cat data/.api_key)" \
 On every invocation:
 
 **1. Version check (silent, don't block the user):**
-Call `GET /health` → compare `skill_version` from response with this file's version (3.3.0).
+Call `GET /health` → compare `skill_version` from response with this file's version (3.4.0).
 If server version is newer → show ONCE per session:
 > "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md`"
 If same or server unavailable → say nothing, proceed normally.
@@ -351,6 +351,8 @@ Valid gender values (always a list): `["male"]`, `["female"]`, `["non-binary"]`,
 
 Use `mentor-offering` if the user wants to mentor others, `mentor-seeking` if they're looking for a mentor.
 
+Note: Some older profiles may use the legacy tag `mentor` instead of `mentor-offering`/`mentor-seeking`. When searching for mentees, also filter by the legacy `mentor` tag: `looking_for: ["mentor-seeking", "mentor"]`.
+
 **Active search** — specific request:
 ```
 User: "Find me a technical cofounder in Moscow"
@@ -407,7 +409,7 @@ Always frame positively: "87% — that's a strong match!" not just a bare number
 
 User actions: "Write to Aleksey", "More about Maria", "More results"
 
-To paginate results, pass `limit` and `offset` parameters in the search body: `{"limit": 10, "offset": 10}` for the second page.
+To paginate results, pass `limit` and `offset` parameters in the search body: `{"limit": 10, "offset": 10}` for the second page. Search results are limited to a maximum of 20 per page (`limit` must be 1-20).
 
 After search, update last_active implicitly.
 
