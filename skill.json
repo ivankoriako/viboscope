@@ -1,0 +1,30 @@
+{
+  "name": "@ivankoriako/viboscope",
+  "version": "3.0.0",
+  "description": "Find people you'll click with — deep psychological compatibility matching across 9 dimensions and 7 contexts",
+  "author": "ivankoriako",
+  "license": "MIT",
+  "repository": "https://github.com/ivankoriako/viboscope",
+  "homepage": "https://viboscope.com",
+  "keywords": [
+    "compatibility",
+    "matching",
+    "cofounder",
+    "networking",
+    "psychology",
+    "team-building",
+    "social",
+    "people-search"
+  ],
+  "platforms": [
+    "claude-code",
+    "cursor",
+    "gemini-cli",
+    "codex",
+    "windsurf",
+    "replit",
+    "roo-code",
+    "aider"
+  ],
+  "skill": "SKILL.md"
+}
