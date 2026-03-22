@@ -7,7 +7,7 @@ description: >
   "who am I compatible with", "check compatibility with @nickname", "Viboscope",
   "inbox", "входящие", "найди мне", "поищи людей", "проверь совместимость",
   "find me a partner", "find me a team".
-version: 3.0.0
+version: 3.1.0
 author: ivanschmidt
 license: MIT
 ---
@@ -39,7 +39,7 @@ curl -s -H "Authorization: Bearer $(cat data/.api_key)" \
 On every invocation:
 
 **1. Version check (silent, don't block the user):**
-Call `GET /health` → compare `skill_version` from response with this file's version (3.0.0).
+Call `GET /health` → compare `skill_version` from response with this file's version (3.1.0).
 If server version is newer → show ONCE per session:
 > "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/clawmatch.md`"
 If same or server unavailable → say nothing, proceed normally.
@@ -55,41 +55,69 @@ If same or server unavailable → say nothing, proceed normally.
 
 Run when `data/.api_key` does not exist. The profile describes the whole person and works for any type of search later.
 
-If user triggers onboarding with a search request like "find me a cofounder", say: "First let's build your profile — takes 2 minutes. After that you can search for anyone."
+If user triggers onboarding with a search request like "find me a cofounder", say: "First let's build your profile, then we'll search."
 
-**Step 0 — Use existing context (IMPORTANT):**
+### Step 0 — Gather context silently
 
-Before asking the user to go to external LLMs, check what you ALREADY know:
+Before asking anything, collect what you already know:
 - Conversation history in the current session
-- Files in the workspace (README, about pages, bios)
+- Files in the workspace (README, about pages, bios, git config)
 - Previous interactions, writing style, topics discussed
 - Platform profile data if available
 
-If you have enough context to fill basic fields (city, age, interests, skills, communication style), pre-fill them. Tell the user:
-> "Based on what I already know about you, I've drafted a partial profile. For a deeper psychological portrait — which makes matching more accurate — you can also paste this prompt into ChatGPT/Claude/Gemini."
+Extract: name, city, language, interests, skills, communication style — whatever is available.
 
-This reduces friction: the user can register with what you already have, then deepen later.
+### Step 1 — First message
 
-**Step 1 — Consent + Prompt:**
+Show what you found and present options. In ONE message:
 
-In ONE message, give privacy notice and the prompt:
-
-> **Privacy:** Other users see only your nickname, city, and interests. Your psychological portrait is used solely to calculate match percentages.
+> **Viboscope** — find people you'll click with.
 >
-> For the best matching accuracy, paste this prompt into your AI assistants (ChatGPT, Claude, Gemini — whichever you use, the more the better) and send me the responses. Or say "use what you know" and I'll build your profile from our conversation:
+> To match you with compatible people, I need to build your psychological profile. The more complete it is, the more accurate your matches will be.
+>
+> Here's what I already know about you:
+> [show extracted basics: name, city, interests — if any]
+>
+> **Profile completeness: ██░░░░░░░░ 20%**
+>
+> Ways to improve it (can combine):
+>
+> **1. Prompt for your LLMs** — if you've been chatting with ChatGPT, Claude, or Gemini for a while, they already know a lot about you. I'll give you a prompt, you send it to them — deepest portrait in 2 minutes. *Recommended if you have LLM history.*
+>
+> **2. Context scan** — I can look through your projects, files, and history on this computer to learn more. I'll show everything I find before sending anything — nothing leaves without your OK.
+>
+> **3. Questionnaires** — scientifically validated, based on leading psychological models (Big Five, Schwartz Values, Attachment Theory). 10 minutes for all, or one at a time.
+>
+> **Privacy:** Other users see only your nickname, city, and interests. Your psychological portrait is used solely to calculate match scores.
+>
+> Where do you want to start?
 
-Then give this prompt:
+Adapt this message to the user's language. Do NOT mention "9 dimensions" or psychological terminology — keep it simple.
 
-> Create my complete profile for a people-matching service. Be completely honest — flattery makes matching worse.
+### Step 2a — LLM Prompt (primary path)
+
+Generate the prompt **in the user's language**. The template below is in English — translate and adapt it naturally.
+
+Save as `data/viboscope-prompt.md` or show on request. Do NOT dump the full prompt into chat unsolicited — offer: "Save as file or show here?"
+
+**Prompt template (translate to user's language):**
+
+> Create my complete profile for a people-matching service.
+>
+> IMPORTANT RULES:
+> - Be completely honest — flattery makes matching worse
+> - Only write what you actually know about me from our conversations
+> - If you don't know something — write "no data" for that section, do NOT make things up
+> - Better to leave a gap than to guess wrong
 >
 > **About me (basics):**
-> - My city and country
-> - My approximate age
-> - My gender (optional)
+> - City and country
+> - Approximate age
+> - Gender (optional)
 > - Languages I speak
-> - My interests and hobbies
-> - My professional skills
-> - What kind of people I'd like to find (cofounder, project partner, mastermind group, friend, romantic partner — anything)
+> - Interests and hobbies
+> - Professional skills
+> - What kind of people I want to find (cofounder, project partner, mastermind group, friend, romantic partner — anything)
 >
 > **Personality & Character:**
 > - Big Five traits with approximate 0-1 scores (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism)
@@ -131,53 +159,101 @@ Then give this prompt:
 >
 > Write 500-800 words. Be direct and specific.
 
-If user has no external LLMs → "OK, I'll interview you myself, 5-10 minutes." Ask 10-15 questions covering the same areas.
+### Step 2b — Context scan (with permission)
 
-**Step 2 — Merge, extract, propose profile:**
+Only if user agrees. Scan files, projects, git config, README files, bios. Extract what you can. Show the user EVERYTHING you found before proceeding:
 
-After receiving responses (one or many):
-1. Save each to `data/raw/portrait-{source}.md`
-2. Merge all portraits. **YOU make all decisions — the user is not a psychologist:**
-   - Common themes across sources = strongest signals
-   - **When sources contradict** (e.g. age 30 vs 33, city Moscow vs Almaty): YOU pick the most specific/reliable one. Don't ask the user to resolve every conflict — just show your best guess in the final profile, user will correct if wrong.
-   - **Big Five, values, conflict style, attachment — all numerical scores:** YOU extract and calculate from the text. NEVER ask the user to fill in "O=? C=? E=?" — they don't know what that means. You read the portraits, you estimate.
-   - **Basics (age, city, languages):** extract from portraits. If LLM mentions "lives in Ulyanovsk" — use that. If unclear — pick most plausible, user confirms later.
-   - Set null ONLY when no source mentions the topic at all
+> "Here's what I found on your computer: [list]. Use this for your profile?"
+
+### Step 2c — Questionnaires
+
+Available questionnaires, each covers specific dimensions. Offer by relevance or all at once:
+
+| Questionnaire | Covers | Items | Time |
+|---------------|--------|-------|------|
+| **BFI-2-XS** (Soto & John, 2017) | Personality (Big Five) | 15 | 1.5 min |
+| **PVQ-21** (Schwartz, 2003) | Values | 21 | 2 min |
+| **ECR-S** (Wei et al., 2007) | Attachment style | 12 | 1.5 min |
+| **Conflict Style Questionnaire** (Northouse, 2018) | Conflict resolution | 20 | 2 min |
+| **Work Style** (Viboscope original) | Work preferences | 7 | 1 min |
+
+All questionnaires are scientifically validated. If the user has time, suggest all (~10 min total). If not, recommend based on context:
+- Searching for cofounder → "Work Style and Conflict questionnaires will help most"
+- Searching for friends → "Values questionnaire is the strongest predictor"
+- Searching for romantic partner → "Attachment and Values are key"
+- General → "Start with BFI-2-XS, it's the foundation"
+
+**How to administer:** Fetch questionnaire from server with the user's language:
+```
+GET /questionnaires/bfi-2-xs?lang=ru
+```
+Response includes items, scale labels, scoring, and instruction — all translated. If `is_fallback: true`, the requested language is not available — translate from English yourself, or tell the user.
+
+List all available questionnaires: `GET /questionnaires?lang=ru`
+
+Ask questions conversationally — one by one or in small batches. Use the exact item text from the server response.
+
+### Step 3 — Merge data and resolve conflicts
+
+After receiving data from any combination of sources:
+
+1. Save LLM portraits to `data/raw/portrait-{source}.md`
+2. Save questionnaire raw answers to `data/raw/questionnaire-{name}.json`
+
+**Merging rules:**
+
+- **Questionnaire scores always take priority** over LLM-extracted scores for the same dimension
+- If questionnaire and LLM diverge by >20% on a dimension: ask the user to clarify. Example: "The questionnaire shows you're more introverted, but ChatGPT described you as outgoing. Which feels more accurate?"
+- If questionnaire and LLM diverge by ≤20%: use questionnaire score silently
+- If no questionnaire for a dimension: use LLM-extracted score
+- If neither: leave null, reflect in completeness %
+- **YOU extract all numerical scores** from text. NEVER ask the user "rate your Openness 0-1" — they don't know what that means
+- When LLM wrote "no data" for a section: respect it, leave null, do NOT fill in from imagination
+
 3. Extract into structured profile:
    - **basics**: geo, age, languages, interests, skills, looking_for
    - **big_five** (0-1), **values** (8 dimensions, 0-1), **communication**, **conflict_style** (5 dimensions), **attachment_style** (3 dimensions), **work_style** (8 axes), **team_role**, **founder_type**, **decision_making**, **risk_attitude**
    - **portrait** (synthesized text)
-4. Suggest a **nickname** based on name/interests. Check availability: `GET /nicknames/{nick}/availability`
-6. Show the COMPLETE profile as a clean, readable card in the user's language. NO raw field names, NO JSON, NO code. Example (in Russian):
 
-> **Твой профиль Viboscope**
->
-> **Никнейм:** ivan_k (свободен)
-> **Город:** Москва | **Возраст:** 28 | **Языки:** русский, английский
->
-> **Интересы:** стартапы, теннис, психология, AI
-> **Навыки:** продукт-менеджмент, маркетинг, Python
-> **Ищу:** кофаундера для AI-стартапа, мастермайнд-группу, друзей для глубоких разговоров
->
-> **Характер:** Открытый и любопытный (O: высокий), организованный (C: выше среднего), скорее интроверт (E: ниже среднего), дружелюбный (A: высокий), эмоционально стабильный (N: низкий)
->
-> **Ценности:** честность и автономия — главное, ориентация на рост, забота о близких
->
-> **Общение:** глубокие разговоры > small talk, предпочитает async, обратная связь прямая
->
-> **Конфликты:** ищет компромисс, но может настоять. После ссоры — первым идёт на контакт
->
-> **Работа:** быстрый темп, свободный график, максимальная автономия, agile
->
-> **Нет данных:** стиль привязанности, стиль юмора (можно дополнить потом)
->
-> Всё верно? Поправить что-то или регистрируемся?
+4. Calculate **completeness** (0-100):
+   - Basics filled: +15
+   - Each dimension with data: +8 (×9 dimensions = max 72)
+   - Multiple sources for same dimension: +1 per extra source (max +13)
+   - Total cap: 100
 
-IMPORTANT: Translate Big Five scores into human-readable descriptions, not numbers. "O: 0.8" → "Очень открытый новому". Show numbers only in parentheses as reference.
+5. Suggest a **nickname** based on name/interests. Check: `GET /nicknames/{nick}/availability`
+
+6. Show the profile as a clean, readable card in the user's language. NO raw field names, NO JSON, NO code. Translate Big Five into human-readable: "O: 0.8" → "Very open to new experiences". Show numbers only in parentheses.
+
+Example:
+
+> **Your Viboscope Profile**
+>
+> **Nickname:** ivan_k (available)
+> **City:** Moscow | **Age:** 28 | **Languages:** Russian, English
+>
+> **Interests:** startups, tennis, psychology, AI
+> **Skills:** product management, marketing, Python
+> **Looking for:** AI startup cofounder, mastermind group
+>
+> **Personality:** Curious and open (high), organized (above average), more introverted (below average), friendly (high), emotionally stable (low neuroticism)
+>
+> **Values:** honesty and autonomy come first, growth-oriented
+>
+> **Communication:** deep conversations > small talk, prefers async, direct feedback
+>
+> **Conflicts:** seeks compromise but can push back. Initiates repair after conflicts
+>
+> **Work:** fast pace, flexible schedule, maximum autonomy
+>
+> **Profile completeness: ███████░░░ 70%**
+> Missing: attachment style, humor. You can fill these later.
+>
+> Everything correct? Want to change anything, or register?
 
 User corrects what they want (or says "go") → proceed to register.
 
-**Step 3 — Register:**
+### Step 4 — Register
 
 ```
 POST /register
@@ -188,24 +264,35 @@ POST /register
     "interests": [...], "skills": [...],
     "looking_for": { "tags": [...], "description": "..." },
     "big_five": { "openness": 0.8, ... },
+    "values": { "universalism": 0.7, ... },
     "communication": { "style": [...], "energy": "..." },
+    "conflict_style": { "competing": 0.3, ... },
+    "attachment_style": { "anxiety": 0.2, "avoidance": 0.3 },
+    "work_style": { "pace": "fast", ... },
     "gender": "male",
     "decision_making": [...], "risk_attitude": "...",
-    "portrait": "...", "portrait_source": "multi"
+    "portrait": "...",
+    "portrait_source": "multi",
+    "data_sources": ["context", "llm_chatgpt", "bfi_questionnaire", "pvq_questionnaire"],
+    "completeness": 70,
+    "bfi_answers": [5, 2, 6, 3, ...]
   },
   "consent_given": true,
   "consent_version": "1.0"
 }
 ```
 
-`portrait_source` = "multi" if from multiple LLMs, or "chatgpt"/"claude"/"gemini"/"manual" if single source.
+`portrait_source`: "multi" (multiple LLMs), "chatgpt"/"claude"/"gemini" (single LLM), "questionnaire" (no LLM), "manual" (agent interview).
+
+`data_sources`: list of all sources used. Possible values: `context`, `computer_scan`, `llm_chatgpt`, `llm_claude`, `llm_gemini`, `llm_other`, `bfi_questionnaire`, `pvq_questionnaire`, `ecr_questionnaire`, `conflict_questionnaire`, `work_questionnaire`.
 
 On success:
 - Save `api_key` from response to `data/.api_key`
 - Run `chmod 600 data/.api_key`
 - Create `data/.gitignore` with content: `.api_key`
 - Generate `data/profile.yaml` with full profile + local fields (completeness, missing_areas)
-- Tell user: "Profile ready! You can now search for cofounders, project partners, mastermind groups, friends — anyone you need to click with. Just tell me who you're looking for."
+- Show completeness bar and suggest next steps if < 100%
+- Route to what the user originally asked for (search, etc.)
 
 ## Mode: Search
 
@@ -393,20 +480,43 @@ User: "Notify me about logistics cofounders"
 
 ## Mode: Profile Deepening
 
-Triggers: "update my data", "connect GitHub", "обнови данные"
+Triggers: "update my data", "deepen profile", "improve profile", "обнови данные", "углубить профиль", "пройти опросник"
 
-**On request:** re-run portrait or ask targeted questions.
+### On request
 
-**Proactively (gentle, max once per session):**
-> "Humor style is not filled in — it helps find better matches. Want to add it?"
-User says "enough" → stop asking.
+Show current completeness and available options:
 
-**Behavioral observations:**
+> **Profile completeness: ███████░░░ 70%**
+>
+> Available:
+> - Prompt for LLM (if not done yet or want another LLM)
+> - BFI-2-XS: Personality (15 questions, 1.5 min)
+> - PVQ-21: Values (21 questions, 2 min)
+> - ECR-S: Attachment (12 questions, 1.5 min)
+> - Conflict Style (20 questions, 2 min)
+> - Work Style (7 questions, 1 min)
+>
+> What do you want to do?
+
+### Proactively (max once per session, gentle)
+
+Check completeness. If < 100%, suggest the most impactful next step based on what the user is doing:
+- After a search: "Your profile is at 70%. The [X] questionnaire would improve match accuracy — takes [N] minutes. Or not now."
+- Context-smart: searching for cofounder → suggest Work Style; searching for partner → suggest Attachment
+
+User says "enough" or "not now" → stop, don't ask again this session.
+
+### Data priority when updating
+
+Same rules as onboarding: questionnaire > LLM > context. If new questionnaire data conflicts with existing LLM data, questionnaire wins. Update via `PATCH /profile`.
+
+### Behavioral observations
+
 - Accumulate notes locally in profile.yaml behavior.notes
 - NEVER send to server automatically
 - On request: "Here's what I noticed — update profile?"
 - Before sending, show the EXACT text that will be uploaded:
-  > "I'll add this to your profile: [text]. This will be visible in search results. OK?"
+  > "I'll add this to your profile: [text]. OK?"
 
 ## Interpreting Compatibility Results
 
@@ -523,4 +633,6 @@ In autonomous mode, talk "as" the user but never quote their psychological profi
 | List subscriptions | GET | /subscriptions |
 | Update subscription | PATCH | /subscriptions/{id} |
 | Delete subscription | DELETE | /subscriptions/{id} |
+| List questionnaires | GET | /questionnaires?lang=en |
+| Get questionnaire | GET | /questionnaires/{id}?lang=en |
 | Server health | GET | /health |
