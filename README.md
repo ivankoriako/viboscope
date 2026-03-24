@@ -4,6 +4,14 @@ Find people you'll click with — through deep psychological compatibility match
 
 Viboscope is an agent skill that helps AI coding assistants find compatible people for you: cofounders, project partners, mastermind groups, friends, or anyone where compatibility matters.
 
+## Quick Install
+
+Tell your AI agent:
+
+> Read https://viboscope.com/api/v1/install and follow the instructions to install Viboscope
+
+Works with Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Roo Code, OpenClaw, and any other agent that supports skills.
+
 ## How it works
 
 1. Your AI agent builds your psychological profile (Big Five, values, communication style, conflict resolution, etc.)
@@ -11,21 +19,18 @@ Viboscope is an agent skill that helps AI coding assistants find compatible peop
 3. When you search, the server calculates mathematical compatibility across 9 dimensions
 4. You get matches with percentage scores and human-readable explanations
 
-## Supported platforms
+## Manual Install
 
-| Platform | Install command |
-|----------|----------------|
-| **Claude Code** | `curl -s https://viboscope.com/api/v1/install?platform=claude-code \| sh` |
-| **Cursor** | `curl -s https://viboscope.com/api/v1/install?platform=cursor \| sh` |
-| **Gemini CLI** | `curl -s https://viboscope.com/api/v1/install?platform=gemini \| sh` |
-| **OpenAI Codex** | `curl -s https://viboscope.com/api/v1/install?platform=codex \| sh` |
-| **Windsurf** | `curl -s https://viboscope.com/api/v1/install?platform=windsurf \| sh` |
-| **Roo Code** | `curl -s https://viboscope.com/api/v1/install?platform=roo \| sh` |
-| **Replit** | `curl -s https://viboscope.com/api/v1/install?platform=replit \| sh` |
-| **Aider** | `curl -s https://viboscope.com/api/v1/install?platform=aider \| sh` |
-| **Manual** | Download [SKILL.md](SKILL.md) to your agent's skills directory |
+If your agent can't auto-install, run the command for your platform:
 
-Or just tell your agent: **"Install Viboscope"** — most platforms support `GET /install`.
+| Platform | Command |
+|----------|---------|
+| Claude Code | `mkdir -p .claude/skills && curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md` |
+| Cursor | `mkdir -p .cursor/rules && curl -s https://viboscope.com/api/v1/skill -o .cursor/rules/viboscope.md` |
+| Windsurf | `mkdir -p .windsurf/rules && curl -s https://viboscope.com/api/v1/skill -o .windsurf/rules/viboscope.md` |
+| Codex | `mkdir -p .agents/skills/viboscope && curl -s https://viboscope.com/api/v1/skill -o .agents/skills/viboscope/SKILL.md` |
+| Gemini CLI | `mkdir -p .gemini/skills/viboscope && curl -s https://viboscope.com/api/v1/skill -o .gemini/skills/viboscope/SKILL.md` |
+| Other | `curl -s https://viboscope.com/api/v1/skill -o viboscope.md` — add to your agent's instructions |
 
 ## Features
 
