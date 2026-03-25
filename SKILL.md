@@ -263,28 +263,25 @@ Ask questions one at a time. Use the exact item text from the server response.
 **Example: BFI-2-XS dialogue (15 items, ~1.5 min)**
 
 ```
-Agent: Let's start with a quick personality questionnaire — 15 questions, takes about a minute.
-       Rate each from 1 (strongly disagree) to 5 (strongly agree).
+Agent: Big Five — 15 вопросов, ~1.5 мин.
+       Отвечай от 1 до 5: 1 = совсем не про меня, 5 = точно про меня.
 
-       1. "I see myself as someone who tends to be quiet."
+       [1/15]: "Тихий, молчаливый"
 
 User:  4
 
-Agent: 2. "I see myself as someone who is compassionate, has a soft heart."
+Agent: [2/15]: "Сочувствующий, с мягким сердцем"
 
 User:  5
 
-Agent: Got it. 3. "I see myself as someone who tends to be disorganized."
+Agent: [3/15]: "Склонный к беспорядку"
 
 User:  2
 
-Agent: [continues through all 15 items, then calculates scores]
+Agent: [continues through all 15 items, no comments between questions]
 
-Agent: Done! Here's what I see:
-       - High agreeableness — you're warm and caring
-       - Moderate extraversion — social but value quiet time
-       - High conscientiousness — organized and reliable
-       Profile updated. Want to continue with Values (PVQ-21)?
+Agent: Готово! Вижу: тёплый и заботливый, в меру общительный, организованный.
+       Профиль обновлён. Пройти ещё Values (PVQ-21)?
 ```
 
 **STRICT questionnaire rules — follow exactly:**
@@ -444,22 +441,41 @@ Profile completeness: ████████░░ {N}%
 Missing: {list of unfilled dimensions}
 ```
 
-**Search results** (each match):
+**Search results** (each match — format like the landing page):
 ```
-1. @{nickname} — {score}%
-   {City}, {age} | {shared interests}
-   Strengths: {from key_dimensions where score > 80%}
-   Watch out: {from key_dimensions where score < 60%, omit if none}
+@{nickname} — {score}% {label}
+  {City}, {age}
+  {dim1_name}  {dim1_score} ████████░░
+  {dim2_name}  {dim2_score} ███████░░░
+  {dim3_name}  {dim3_score} ██████░░░░
+  {insight text}
 ```
-Data source: use `key_dimensions` and `insights` from the API search response. Do NOT invent strengths/weaknesses.
+Show top 3 dimensions from `key_dimensions` (highest weight for this context). Use visual bar (█/░, 10 blocks). End with `insight` text. If `insight` is null, use shared_interests: "Both enjoy {x} and {y}".
+
+Data source: use `key_dimensions` and `insight` from the API search response. Do NOT invent data.
+
+**If `insufficient_data: true`:** Do NOT show score or dimension bars. Instead:
+```
+@{nickname}
+  {City}, {age} | shared: {shared_interests}
+  ⚠ Not enough data for accurate match
+```
 
 **Questionnaire progress** (during any questionnaire):
+
+First message only:
 ```
-[{current}/{total}] {questionnaire name}
-{question text}
-{scale from questionnaire response, e.g. "1 (strongly disagree) — 5 (strongly agree)" or "1-7"}
+{questionnaire name} — {total} questions, ~{time} min.
+{scale instruction, e.g. "1 = strongly disagree, 5 = strongly agree"}
+
+[1/{total}]: "{question text}"
 ```
-MANDATORY: ask ONE question at a time. User types a single number. Groups of 5 only if user explicitly requests.
+
+All subsequent messages (NO questionnaire name, NO scale repeat):
+```
+[{N}/{total}]: "{question text}"
+```
+MANDATORY: ONE question per message. User types a single number. No comments between questions.
 
 **Completeness bar** (use everywhere completeness is shown):
 ```
