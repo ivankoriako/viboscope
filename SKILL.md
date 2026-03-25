@@ -7,7 +7,7 @@ description: >
   "who am I compatible with", "check compatibility with @nickname", "Viboscope",
   "inbox", "входящие", "найди мне", "поищи людей", "проверь совместимость",
   "find me a partner", "find me a team".
-version: 3.5.0
+version: 4.0.0
 author: ivanschmidt
 license: MIT
 ---
@@ -47,7 +47,7 @@ curl -s -H "Authorization: Bearer $(cat data/.api_key)" \
 On every invocation:
 
 **1. Version check (silent, don't block the user):**
-Call `GET /health` → compare `skill_version` from response with this file's version (3.5.0).
+Call `GET /health` → compare `skill_version` from response with this file's version (4.0.0).
 If server version is newer → show ONCE per session:
 > "A new version of Viboscope is available. Update: `curl -s https://viboscope.com/api/v1/skill -o .claude/skills/viboscope.md`"
 If same or server unavailable → say nothing, proceed normally.
@@ -68,16 +68,14 @@ If user triggers onboarding with a search request like "find me a cofounder", sa
 **MANDATORY RULES — do NOT skip or reorder:**
 - You MUST complete onboarding steps in order. Do NOT skip to registration.
 - NEVER register with only basic fields (name, city, interests). The user's match quality depends on profile depth.
-- NEVER call POST /register until profile completeness >= 50%.
+- Server calculates completeness automatically. After onboarding, call POST /profile/gaps to see what's missing.
 - ALWAYS present the LLM prompt proactively — do not just list it as an option.
 - Before registering, verify this checklist:
   1. Basics collected (name, city, looking_for)
-  2. At least one deep source used (LLM prompt OR 2+ questionnaires OR context scan)
+  2. LLM prompt offered (user used it OR explicitly declined)
   3. Profile card shown to user
   4. User confirmed or corrected the profile
-  5. Completeness >= 50%
   If any item is missing — do NOT proceed to registration.
-  Exception: user says EXACTLY "register as is", "just register", or "skip, register now" — warn about low quality and proceed (see Step 4). General impatience ("ok", "let's go", "skip") is NOT a request to skip — offer the fastest path to 50% instead.
 
 ### Step 0 — Gather context silently
 
@@ -94,36 +92,35 @@ If Step 0 found nothing — that's fine, skip the "Here's what I know" block in 
 ### Onboarding flow
 
 ```
-User starts
+Step 0:   Gather context silently (git, files, session)
     │
     ▼
-Step 0: Context scan (silent) ──→ found basics? ──yes──→ prefill profile
-    │                                    │no
-    ▼                                    ▼
-Step 0.5: Ask basics ◄──────────────────┘
-(name, city, interests, looking_for)
+Step 0.5: Collect basics (name, city, looking_for)
     │
     ▼
-Step 1: Present AI prompt (PRIMARY) ──→ generate prompt immediately
+Step 1:   Show AI assistant prompt (PRIMARY) + offer scan/questionnaires
+    │
+    ├──→ PRIMARY: Copy prompt → paste to ChatGPT/Claude/Gemini
     │                                         │
-    │                              user sends to ChatGPT/Claude/Gemini
-    │                                         │
-    │                                    paste portrait back ──→ extract scores
+    │                                    paste portrait back → extract scores
     │
-    ├──→ SECONDARY: Context scan ──→ scan files ──→ show findings
-    ├──→ SECONDARY: Questionnaires ──→ BFI-2-XS / PVQ-21 / ECR-S / Conflict / Work Style
+    ├──→ SECONDARY: Context scan → scan files → show findings
+    ├──→ SECONDARY: Questionnaires → BFI-2-XS / PVQ-21 / ECR-S / Conflict / Work Style
     │
     ▼
-Step 3: Merge all sources ──→ resolve conflicts ──→ build profile.yaml
+Step 2:   POST /profile/gaps → server shows what's missing + recommendations
     │
     ▼
-Completeness check: >= 50%? ──no──→ "Let's fill more before registering"
-    │yes                                    │
-    ▼                                       ▼
-Step 4: Register ──→ POST /register    offer questionnaires/prompt
+Step 3:   Ask only missing questions from gaps (NOT full questionnaires)
     │
     ▼
-Ready to search! (or continue filling questionnaires to improve matches)
+Step 4:   Register → POST /register (any completeness)
+    │
+    ▼
+Step 5:   POST /profile/gaps (authenticated) → show completeness + next steps
+    │
+    ▼
+Ready to search! (or continue filling to improve matches)
 ```
 
 ### Step 0.5 — Collect basics (MANDATORY before Step 1)
@@ -132,7 +129,7 @@ If basics (name, city, interests, looking_for) are still unknown after Step 0, y
 
 > "Quick question — what's your name, city, and what kind of people are you looking for?"
 
-This unlocks +15 completeness points and the `looking_for` field required for search. Don't skip this.
+This provides the base fields required for search. Don't skip this.
 
 ### Step 1 — First message + AI assistant prompt (primary path)
 
@@ -157,13 +154,13 @@ This unlocks +15 completeness points and the `looking_for` field required for se
 >
 > **Other options** (can combine with the prompt):
 > - **Context scan** — I look through your files and projects. Nothing leaves without your OK.
-> - **Questionnaires** *(~10 min for all 5)* — scientifically validated, cover 5 of 9 dimensions.
+> - **Questionnaires** *(~10 min for all 5)* — scientifically validated, cover 5 of 10 dimensions.
 >
-> **Privacy:** Other users see only your nickname, city, and interests. Your psychological portrait is used solely to calculate match scores.
+> **Privacy:** Other users see only public data: nickname, city, age, interests, skills, languages, looking_for, and last_active (controllable via privacy settings). Your psychological portrait, Big Five scores, values, attachment style, and questionnaire answers are never shared — they are used solely to calculate match scores.
 
 **For agents:** Save to file on CLI, show inline on web. The user can then choose to use it or pick alternatives.
 
-**Note:** Questionnaires cover 5 of 9 profile dimensions. The remaining 4 (communication style, team role, decision-making, risk attitude) require an AI assistant portrait or context scan. Users who only do questionnaires will reach ~55% completeness — this is enough to search but matches will be less precise.
+**Note:** Questionnaires cover 5 of 10 profile dimensions. The remaining 5 (communication style, team role, looking_for, decision-making, risk attitude) require an AI assistant portrait or context scan. Users who only do questionnaires will reach ~55% completeness — this is enough to search but matches will be less precise.
 
 ### Step 2a — AI Assistant Prompt (primary path)
 
@@ -335,22 +332,33 @@ After receiving data from any combination of sources:
    - **big_five** (0-1), **values** (10 Schwartz dimensions, 0-1: self_direction, stimulation, hedonism, achievement, power, security, conformity, tradition, benevolence, universalism), **communication** (style: list of tags, energy: low/medium/high, feedback_preference: direct/diplomatic/gentle/indirect), **conflict_style** (5 dimensions: competing, collaborating, compromising, avoiding, accommodating — questionnaire covers 4; accommodating comes from LLM only), **attachment_style** (2 scores: anxiety, avoidance; secure is server-computed), **work_style** (7 axes, scale 1-7: pace, structure, autonomy, decision_speed, feedback, risk, focus), **team_role** (primary + secondary from: creator, analyst, driver, coordinator, networker, specialist), **decision_making**, **risk_attitude**
    - **portrait** (synthesized text)
 
-4. Calculate **completeness** (0-100). The 9 dimensions that count:
-   `big_five`, `values`, `communication`, `conflict_style`, `attachment_style`, `work_style`, `team_role`, `interests` (from basics), `portrait`.
-   Fields like `decision_making`, `risk_attitude`, `founder_type` improve profile quality but do not count toward completeness.
+4. **Completeness** is calculated by the server automatically. Do NOT calculate it yourself.
+   After collecting data, call `POST /profile/gaps` to get the server-calculated completeness and see what's still missing.
 
-   Formula:
-   - Basics filled (geo, age, looking_for): +15
-   - Each of 9 dimensions with data: +8 (max 72)
-   - Multiple sources for same dimension: +1 per extra source (max +13)
-   - Total cap: 100
+   ```
+   # Before registration (anonymous):
+   POST /profile/gaps?lang=ru
+   Body: { "profile": { "geo": "...", "age": ..., "big_five": {...}, ... } }
 
-   Questionnaires cover 5 dimensions (big_five, values, conflict_style, attachment_style, work_style). Communication, team_role, portrait require LLM or context.
+   # After registration (authenticated):
+   POST /profile/gaps?lang=ru
+   Headers: Authorization: Bearer <api_key>
+   Body: {}
+   ```
 
-   Examples:
-   - Basics (+15) + 5 questionnaires (+40) = 55% → enough to register
-   - Basics (+15) + LLM portrait covering all 9 dims (+72) = 87% → great profile
-   - Basics (+15) + only interests (+8) = 23% → NOT enough, need more data
+   The response contains:
+   - `completeness` (0-100) — server-calculated percentage
+   - `visible_in_search` — whether the profile appears in other users' searches (requires completeness >= 20)
+   - `gaps[]` — list of missing dimensions with:
+     - `type: "hint"` → show the hint text to the user, fill the field directly
+     - `type: "questions"` → ask these specific questions (NOT the full questionnaire)
+     - `type: "questionnaire"` → offer the full questionnaire via `GET /questionnaires/{name}`
+   - `recommendations` — top-2 human-readable suggestions, show to user
+
+   If `visible_in_search` is false, tell the user: "Your profile isn't visible to others yet — fill a bit more to appear in search."
+   If `visible_in_search` is true but completeness < 40, warn: "You're in search, but matches are approximate — add more data for precise results."
+
+   Call `/profile/gaps` once after each batch of updates (after PATCH /profile or after completing a questionnaire). Do NOT call after every individual field.
 
 5. Suggest a **nickname** based on name/interests. Check: `GET /nicknames/{nick}/availability`
 
@@ -360,14 +368,11 @@ User corrects what they want (or says "go") → proceed to register.
 
 ### Step 4 — Register
 
-**⛔ STOP — DO NOT CALL POST /register UNTIL ALL CONDITIONS ARE MET:**
-1. Completeness >= 50%
-2. At least one deep source used (LLM prompt OR 2+ questionnaires OR context scan)
-3. Profile card shown AND user confirmed
+Registration is allowed at any completeness level. The server calculates completeness automatically.
 
-If ANY condition is false → DO NOT REGISTER. Offer the quickest path to 50% (usually 1-2 questionnaires): "Your profile is at {N}% — matches will be weak. Let's add more data first."
+If completeness is low (< 30%), suggest: "Your profile is thin — matches will be imprecise. Want to add more data first, or register and improve later?"
 
-Exception: user says EXACTLY "register as is" or "just register" → warn: "OK, registering at {N}%. You can improve your profile later." Then proceed.
+After successful registration, IMMEDIATELY call `POST /profile/gaps` (authenticated) and show the user their completeness, visibility status, and recommendations.
 
 ```
 POST /register
@@ -388,7 +393,6 @@ POST /register
     "portrait": "...",
     "portrait_source": "multi",
     "data_sources": ["context", "llm_chatgpt", "bfi_questionnaire", "pvq_questionnaire"],
-    "completeness": 70,
     "bfi_answers": [5, 2, 6, 3, ...]
   },
   "consent_given": true,
@@ -406,15 +410,17 @@ POST /register
 
 **Note:** `interests`, `skills`, and `languages` are normalized on the server: lowercased and spaces replaced with hyphens. Display them in human-readable form (e.g., convert `ux-design` back to `UX Design` for display).
 
-**Before sending:** Ask explicit consent: "Your psychological profile will be stored on the Viboscope server to calculate compatibility with other users. Other people see only your nickname, city, and interests — never your personality scores or questionnaire answers. Continue?" Only set `consent_given: true` if user explicitly agrees.
+**Before sending:** Ask explicit consent: "Your psychological profile will be stored on the Viboscope server to calculate compatibility with other users. Other people see only public data (nickname, city, age, interests, skills, languages, looking_for, last_active) — never your personality scores, portrait, or questionnaire answers. You can control visibility of age, location, and last_active in privacy settings. Continue?" Only set `consent_given: true` if user explicitly agrees.
 
-On success:
-- Save `api_key` from response to `data/.api_key` (or `.env` file in IDE platforms)
-- On Unix: `chmod 600 data/.api_key`
-- Create `data/.gitignore` with content: `.api_key`
-- Generate `data/profile.yaml` with full profile + local fields (completeness, missing_areas)
-- Show completeness bar and suggest next steps if < 100%
-- Route to what the user originally asked for (search, etc.)
+⛔ POST-REGISTRATION CHECKLIST — verify ALL before proceeding:
+1. `api_key` saved to `data/.api_key` (or `.env` in IDE platforms)
+2. On Unix: `chmod 600 data/.api_key`
+3. `data/.gitignore` created with `.api_key`
+4. `data/profile.yaml` generated with full profile
+5. `POST /profile/gaps` called → completeness and recommendations shown to user
+If any item missing — complete it before proceeding.
+
+Then route to what the user originally asked for (search, etc.).
 
 ## Output Templates (mandatory)
 
@@ -557,12 +563,14 @@ The server returns `compatibility` with overall `score` and per-dimension scores
 
 2. Maria, Moscow | 82%
    Strong work style fit (88%), complementary team roles.
-   Note: limited profile data (4/9 dimensions computed).
+   Note: limited profile data (4/10 dimensions computed).
 ```
 
-Confidence = computed_dimensions / 9. Show "(limited data)" if < 5 dimensions computed.
+Confidence = computed_dimensions / 10. Show "(limited data)" if < 5 dimensions computed.
 
-**Score context** — help the user understand what the % means:
+**Insufficient data handling:** If `insufficient_data: true` or `label: "insufficient"` — do NOT show the score as a percentage. Instead say: "Not enough data for an accurate match. Fill in more of your profile (questionnaires, portrait) to get precise compatibility scores." Show shared interests/skills if available, but not the misleading low percentage. Do NOT offer sharing cards for insufficient results.
+
+**Score context** (only when `insufficient_data` is false or absent):
 - **85%+** — exceptionally compatible, rare match
 - **70-84%** — strong compatibility, worth exploring
 - **55-69%** — moderate compatibility, some friction points
@@ -574,6 +582,35 @@ User actions: "Write to Aleksey", "More about Maria", "More results"
 To paginate results, pass `limit` and `offset` parameters in the search body: `{"limit": 10, "offset": 10}` for the second page. Search results are limited to a maximum of 20 per page (`limit` must be 1-20).
 
 After search, update last_active implicitly.
+
+### Sharing Results
+
+After showing a match, offer to generate a shareable text card:
+
+"Want to share this result? Here's a card you can send:"
+
+Single context:
+```
+🔗 Viboscope Match
+@{my_nickname} & @{their_nickname}
+Compatibility: {score}% ({context}) — {label}
+{insight_text}
+
+Check yours: viboscope.com/match/@{my_nickname}
+```
+
+Multi-context (show top 3):
+```
+🔗 Viboscope Match
+@{my_nickname} & @{their_nickname}
+🏢 Business: 87% — excellent
+💕 Romantic: 62% — moderate
+🤝 Friendship: 74% — good
+
+Check yours: viboscope.com/match/@{my_nickname}
+```
+
+Replace placeholders with actual data from the search result. Only offer sharing after user has seen the full result.
 
 ## Mode: Inbox
 
@@ -688,7 +725,7 @@ Triggers: "my profile", "update profile", "privacy settings", "мой профи
   If yes → delete `data/` directory
 - **Restore:** `POST /profile/restore` (within 7 days)
 - **Rotate key:** `POST /api-key/rotate` → save new key to `data/.api_key`
-- **Transfer to another platform:** `POST /auth/transfer-code` → show code to user: "Your transfer code: VIBS-XXXX-XXXX (valid 10 minutes). Say 'Viboscope transfer code VIBS-...' on the new platform."
+- **Transfer to another platform:** `POST /auth/transfer-code` → show code to user: "Your transfer code: VIBS-XXXX-XXXX (valid 10 minutes). Say 'Viboscope transfer code VIBS-...' on the new platform." ⚠️ Tell user: redeeming a transfer code replaces the current API key — the previous platform will lose access.
 
 ## Mode: Subscriptions
 

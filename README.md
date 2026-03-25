@@ -16,7 +16,7 @@ Works with Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Roo Code, OpenClaw,
 
 1. Your AI agent builds your psychological profile (Big Five, values, communication style, conflict resolution, etc.)
 2. The profile is stored securely on the server — other users never see it
-3. When you search, the server calculates mathematical compatibility across 9 dimensions
+3. When you search, the server calculates mathematical compatibility across 10 dimensions
 4. You get matches with percentage scores and human-readable explanations
 
 ## Manual Install
@@ -34,11 +34,11 @@ If your agent can't auto-install, run the command for your platform:
 
 ## Features
 
-- **9 compatibility dimensions**: values, communication, conflict style, attachment, work style, Big Five, team role, interests, embedding
+- **10 compatibility dimensions**: values, communication, conflict style, attachment, work style, Big Five, team role, interests, looking_for, embedding
 - **7 search contexts**: business, romantic, friendship, professional, intellectual, hobby, general
 - **Group matching**: find teams for mastermind groups or hackathons
 - **Cross-platform**: transfer your profile between agents with transfer codes
-- **Privacy-first**: your psychological portrait never leaves the server, only match scores are shared
+- **Privacy-first**: your psychological portrait never leaves the server — other users see only public data (nickname, city, interests) plus match scores
 
 ## Links
 
