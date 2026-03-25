@@ -388,21 +388,15 @@ POST /register
     "decision_making": [...], "risk_attitude": "...",
     "portrait": "...",
     "portrait_source": "multi",
-    "data_sources": ["context", "llm_chatgpt", "bfi_questionnaire", "pvq_questionnaire"],
-    "bfi_answers": [5, 2, 6, 3, ...]
   },
   "consent_given": true,
   "consent_version": "1.0"
 }
 ```
 
-`portrait_source` describes the source of the portrait TEXT only: `"multi"` (multiple LLMs), `"chatgpt"`/`"claude"`/`"gemini"` (single LLM), `"questionnaire"` (no LLM portrait — agent synthesizes text from scores), `"manual"` (agent interview). If one LLM + questionnaires: use the LLM name (e.g. `"chatgpt"`). The `data_sources` field captures the full list of all inputs.
+`portrait_source` describes the source of the portrait TEXT only: `"multi"` (multiple LLMs), `"chatgpt"`/`"claude"`/`"gemini"` (single LLM), `"questionnaire"` (no LLM portrait — agent synthesizes text from scores), `"manual"` (agent interview). If one LLM + questionnaires: use the LLM name (e.g. `"chatgpt"`).
 
-`data_sources`: list of all sources used. Possible values: `context`, `computer_scan`, `llm_chatgpt`, `llm_claude`, `llm_gemini`, `llm_other`, `bfi_questionnaire`, `pvq_questionnaire`, `ecr_questionnaire`, `conflict_questionnaire`, `work_questionnaire`.
-
-**Naming note:** `portrait_source` uses short names (`chatgpt`/`claude`/`gemini`) because it describes the portrait author. `data_sources` uses prefixed names (`llm_chatgpt`/`llm_claude`/`llm_gemini`) to namespace all input types (LLMs, questionnaires, scans) without collisions. These fields serve different purposes — do not confuse them.
-
-**Field length limits:** String fields like `risk_attitude` and `founder_type` have a server-side maximum of 100 characters. Keep values concise.
+**Field length limits:** `risk_attitude`: max 100 chars. `founder_type`: max 50 chars. `looking_for_description`: max 500 chars. `portrait`: max 5000 chars. Keep values concise.
 
 **IMPORTANT: Translate ALL data to English before sending to server.** Interests, skills, looking_for tags, geo, languages — everything must be in English. The server matches by exact string comparison, so "стартапы" won't match "startups", "Москва" won't match "Moscow". Translate and normalize:
 - `interests`: ["стартапы", "ИИ", "шахматы"] → ["startups", "ai", "chess"]
@@ -411,6 +405,7 @@ POST /register
 - `languages`: ["русский", "английский"] → ["russian", "english"]
 - `looking_for.tags`: ["кофаундер"] → ["cofounder"]
 - `looking_for.description`: translate to English
+- `portrait`: **exception — stays in user's language** (used for embeddings, language nuance matters)
 
 Display back to user in their language, but SEND to server in English.
 
