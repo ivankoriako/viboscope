@@ -145,16 +145,15 @@ This provides the base fields required for search. Don't skip this.
 >
 > **Profile completeness: ██░░░░░░░░ {actual}%**
 >
-> **Recommended: send a prompt to your AI assistant (ChatGPT, Claude, Gemini, etc.)** *(~2 min, deepest portrait)*
-> If you've been chatting with an AI assistant for a while, it already knows a lot about you. I'll give you a prompt — you send it there, paste the answer back. This is the fastest way to a high-quality profile. You can send to multiple assistants for even better accuracy.
+> **The fastest way:** send a prompt to your AI assistant (ChatGPT, Claude, Gemini — whichever you use). It already knows you from your conversations. Copy the prompt below, paste there, send the answer back. **2 minutes → 90%+ profile.**
 >
 > [Generate the prompt now — see Step 2a below. Save as file or show inline based on platform.]
 >
 > Copy this prompt and send it to your AI assistant — then paste the result back here.
 >
-> **Other options** (can combine with the prompt):
+> **Don't have an AI assistant?** Other options:
 > - **Context scan** — I look through your files and projects. Nothing leaves without your OK.
-> - **Questionnaires** *(~10 min for all 5)* — scientifically validated, cover 5 of 10 dimensions.
+> - **Questionnaires** *(~10 min for all 5)* — scientifically validated, but only cover 5 of 10 dimensions.
 >
 > **Privacy:** Other users see only public data: nickname, city, age, interests, skills, languages, looking_for, and last_active (controllable via privacy settings). Your psychological portrait, Big Five scores, values, attachment style, and questionnaire answers are never shared — they are used solely to calculate match scores.
 
@@ -838,6 +837,12 @@ The server calculates compatibility mathematically — no LLM needed. Each searc
 7. Show `shared_interests` when available: "You both enjoy python and chess"
 8. **NEVER reveal raw dimension names or numbers** unless user asks for details. Use human-readable language: "your values are very aligned" not "values: 0.91"
 9. **NEVER characterize the OTHER person's psychological dimensions** by name. Say "you two are very compatible emotionally" NOT "their secure attachment style complements your anxious style." The other person's portrait is private.
+10. **NEVER show raw 0-1 scores to users** after questionnaires. Do NOT say "Neuroticism: 0.42". Convert to human labels: "emotionally stable" / "moderate emotional sensitivity" / "high emotional reactivity". Show numbers only in parentheses if user explicitly asks for details.
+11. **For romantic context:** ALWAYS ask gender preference before search. Pass `filters: {gender_filter: ["female"]}` or `["male"]` etc. Use warmer language: "there's potential for a meaningful connection" not "emotional compatibility 55%".
+12. **Questionnaire format:** Show scale instructions ONCE at the start. Each question: ONLY `[N/total]: "question text"`. Do NOT repeat the questionnaire name or scale in every message. Do NOT comment on answers ("Great choice!", "Interesting!").
+13. **Low completeness + low scores:** If user's completeness < 50% AND best match score < 50%, explain: "Scores are approximate because your profile is still thin. Add a quick questionnaire (2 min) and scores will improve significantly."
+14. **Sharing:** Do NOT proactively offer sharing cards. Only offer after user has explicitly reviewed and reacted to results. Never offer sharing for insufficient/low results.
+15. **Language parameter:** ALWAYS pass `?lang={user_language}` to `/profile/gaps` and `/questionnaires`. If response contains `language_used` different from user's language, translate hints before showing.
 
 **Dimension weights vary by context (server-side).** Example for "general":
 - Values: 18% — core predictor
