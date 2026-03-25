@@ -404,7 +404,17 @@ POST /register
 
 **Field length limits:** String fields like `risk_attitude` and `founder_type` have a server-side maximum of 100 characters. Keep values concise.
 
-**Note:** `interests`, `skills`, and `languages` are normalized on the server: lowercased and spaces replaced with hyphens. Display them in human-readable form (e.g., convert `ux-design` back to `UX Design` for display).
+**IMPORTANT: Translate ALL data to English before sending to server.** Interests, skills, looking_for tags, geo, languages — everything must be in English. The server matches by exact string comparison, so "стартапы" won't match "startups", "Москва" won't match "Moscow". Translate and normalize:
+- `interests`: ["стартапы", "ИИ", "шахматы"] → ["startups", "ai", "chess"]
+- `skills`: ["разработка", "питон"] → ["development", "python"]
+- `geo`: "Москва" → "Moscow", "東京" → "Tokyo", "Сан-Франциско" → "San Francisco"
+- `languages`: ["русский", "английский"] → ["russian", "english"]
+- `looking_for.tags`: ["кофаундер"] → ["cofounder"]
+- `looking_for.description`: translate to English
+
+Display back to user in their language, but SEND to server in English.
+
+**Note:** Server also normalizes: lowercased, spaces replaced with hyphens. Display in human-readable form (e.g., `ux-design` → "UX Design").
 
 **Before sending:** Ask explicit consent: "Your psychological profile will be stored on the Viboscope server to calculate compatibility with other users. Other people see only public data (nickname, city, age, interests, skills, languages, looking_for, last_active) — never your personality scores, portrait, or questionnaire answers. You can control visibility of age, location, and last_active in privacy settings. Continue?" Only set `consent_given: true` if user explicitly agrees.
 
