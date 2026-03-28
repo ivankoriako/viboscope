@@ -8,7 +8,7 @@ Viboscope is an agent skill that helps AI coding assistants find compatible peop
 
 Tell your AI agent:
 
-> Read https://viboscope.com/api/v1/install and follow the instructions to install Viboscope
+> Install Viboscope using https://viboscope.com/api/v1/install
 
 Works with Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Roo Code, OpenClaw, and any other agent that supports skills.
 
@@ -38,7 +38,7 @@ If your agent can't auto-install, run the command for your platform:
 - **7 search contexts**: business, romantic, friendship, professional, intellectual, hobby, general
 - **Group matching**: find teams for mastermind groups or hackathons
 - **Cross-platform**: transfer your profile between agents with transfer codes
-- **Privacy-first**: your psychological portrait never leaves the server — other users see only public data (nickname, city, interests) plus match scores
+- **Privacy-first**: your psychological portrait never leaves the server — other users see only public profile data (nickname, city, age, interests, skills, languages, looking_for, last_active according to privacy settings) plus match scores
 
 ## Links
 
